@@ -1,0 +1,67 @@
+# Redirect HTTP -> HTTPS
+server {
+    listen 80;
+    server_name  shop.techdock.xyz www.shop.techdock.xyz;
+
+    include snippets/letsencrypt.conf;
+    return 301 https://shop.techdock.xyz$request_uri;
+}
+
+
+# Redirect WWW -> NON WWW
+server {
+    listen 443 ssl http2;
+    server_name www.shop.techdock.xyz;
+
+    ssl_certificate /etc/letsencrypt/live/shop.techdock.xyz/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/shop.techdock.xyz/privkey.pem;
+    ssl_trusted_certificate /etc/letsencrypt/live/shop.techdock.xyz/chain.pem;
+    include snippets/ssl.conf;
+
+    return 301 https://shop.techdock.xyz$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name shop.techdock.xyz;
+
+    root /var/www/html/shop.techdock.xyz;
+    index index.php;
+
+    # SSL parameters
+    ssl_certificate /etc/letsencrypt/live/shop.techdock.xyz/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/shop.techdock.xyz/privkey.pem;
+    ssl_trusted_certificate /etc/letsencrypt/live/shop.techdock.xyz/chain.pem;
+    include snippets/ssl.conf;
+    include snippets/letsencrypt.conf;
+
+    # log files
+    access_log /var/log/nginx/shop.techdock.xyz.com.access.log;
+    error_log /var/log/nginx/shop.techdock.xyz.com.error.log;
+
+    location = /favicon.ico {
+        log_not_found off;
+        access_log off;
+    }
+
+    location = /robots.txt {
+        allow all;
+        log_not_found off;
+        access_log off;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php7.2-fpm.sock;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        expires max;
+        log_not_found off;
+    }
+
+}
